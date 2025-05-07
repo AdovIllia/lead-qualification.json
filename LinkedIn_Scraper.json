@@ -1,0 +1,122 @@
+{
+  "name": "LinkedIn Scraper",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "authentication": "airtableTokenApi",
+        "baseId": {
+          "__rl": true,
+          "value": "https://airtable.com/appAqYNRYLqgU8w8e/tblBDGjg3LWbcQUBR/viw0l9r5FAYvaBWMe?blocks=hide",
+          "mode": "url"
+        },
+        "tableId": {
+          "__rl": true,
+          "value": "https://airtable.com/appAqYNRYLqgU8w8e/tblBDGjg3LWbcQUBR/viw0l9r5FAYvaBWMe?blocks=hide",
+          "mode": "url"
+        },
+        "triggerField": "date",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.airtableTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a434dd39-5f83-4395-ad52-17e93ec5b9a2",
+      "name": "Airtable Trigger",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "c4paONOOzerBD9tC",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-d7b62b.stack.tryrelevance.com/latest/studios/5676a29a-c3ed-4ed1-bb2c-af36d2bb4c05/trigger_limited",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "fbfdbc3f2c50-44bb-b31c-828fcf7f3c72:sk-YzZlN2VkM2UtYjMyYy00YWMwLWE3ODctODJiYmIyNjFhMjQ4"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"params\":{\"linkedinurl\":\"{{ $json.fields.LinkedIn }}\"},\"project\":\"fbfdbc3f2c50-44bb-b31c-828fcf7f3c72\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "id": "027a423c-ec9f-471f-b666-0ffa4145035d",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "TiPdzwo3bWdKIsxa",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "- Make sure Relevance AI scrapes the company on behalf of which lead has reached out\n- Remove unnecessary words/abbreviations from name OR make sure that relevance AI passes lead's email\n- Likely, we can remove transform to JSON module",
+        "width": 460
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1180,
+        -300
+      ],
+      "id": "c4f33f4c-0005-439a-8068-6996c29d4fa6",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Airtable Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "83fef7cc-f2cf-4ca3-b9e8-c059e359e1da",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "77c4e7836a18b1d5afbd616835eb202c32492e1b8289b4775d87520b3ff17b99"
+  },
+  "id": "qRHBBqXmDVBBTnAD",
+  "tags": []
+}

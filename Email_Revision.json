@@ -1,0 +1,452 @@
+{
+  "name": "Email Revision",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Incoming Lead\n\nName: {{ $json[\"Your Name\"] }}\n\nEmail: {{ $json.Email }}\n\nCompany name: {{ $json[\"Company Name\"] }}\n\nProblem: {{ $json[\"Project Description\"] }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=# Overview\nYou are an expert sales person for an agency that delivers AI solutions. Your job is to respond to incoming leads by addressing their needs in a professional manner. You will receive information like the lead's project description and timeline, and your goal is to convince them that we are the best AI Agency on the market.\n\n## Tools\nProject Database - Use this tool to search through previous projects we have done.\n\n## Rules\n- You will receive information about a lead, and you need to craft a professional email. Keep it concise, nobody wants to read a huge email.\n- Your main objective is to convince the lead to book in a second call. Your job is to make them believe that we can deliver the project they have described and exceed their expectations.\n- Retrieve information about previous projects to share with the lead to prove that our team is capable of handling their project. Find a similar project we have done to share with the lead. Share the result of how we helped the client.\n- If there is no similar previous projects that match the lead's request, do not input any information about previous project. \n\nSign off emails as Elijah, Water Automation\nHere is the current date/time: {{ $now }}\n\n",
+          "maxIterations": 3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        440,
+        0
+      ],
+      "id": "3f4a24d4-6371-42a8-b9e0-8b648214be07",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        360,
+        220
+      ],
+      "id": "1fddf95a-5ed4-42e9-a980-f1b1fd8576cc",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "sarUxNzb6C3utV8Z",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"subject\": {\n         \"type\": \"string\",\n         \"description\": \"The subject line of the email\"\n    },\n      \"email\": {\n          \"type\": \"string\",\n          \"description\": \"The body content of the email\"\n      }\n  },\n    \"required\": [\"subject\", \"email\"]\n}\n               \n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        980,
+        300
+      ],
+      "id": "e64d57e8-9d83-4cc0-8d49-5a94abe64ae3",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aa453708-bc09-42b9-8b1f-914af908a2ee",
+              "name": "output.email",
+              "value": "={{ $json.output.email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        800,
+        0
+      ],
+      "id": "dd3fd8ed-d6e9-408c-b149-687e79b493b0",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Read the Projects table to find a relevant project which can be used as a success case example for a potential customer. Ideally, this example case should be in the same industry and solve a very similar challenge. ",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appAqYNRYLqgU8w8e",
+          "mode": "list",
+          "cachedResultName": "ABB",
+          "cachedResultUrl": "https://airtable.com/appAqYNRYLqgU8w8e"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblkbt0EPunTNbQNw",
+          "mode": "list",
+          "cachedResultName": "Projects",
+          "cachedResultUrl": "https://airtable.com/appAqYNRYLqgU8w8e/tblkbt0EPunTNbQNw"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.1,
+      "position": [
+        600,
+        220
+      ],
+      "id": "48842914-4a8c-4561-a655-f474b967bd9d",
+      "name": "Airtable",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "c4paONOOzerBD9tC",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "adovillya@gmail.com",
+        "subject": "=APPROVAL REQUIRED for a new Lead - {{ $('When Executed by Another Workflow').item.json['Your Name'] }}",
+        "message": "={{ $('When Executed by Another Workflow').item.json['Your Name'] }} has reached out with a request for our services. Please approve or disapprove sending this email to him. \n\nSubject: {{ $('AI Agent').item.json.output.subject }}\nEmail: {{ $json.output.email }}",
+        "responseType": "freeText",
+        "options": {
+          "appendAttribution": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1020,
+        0
+      ],
+      "id": "5f19edcd-fc6d-471c-a2ab-3c8f491261dd",
+      "name": "Gmail",
+      "webhookId": "501e80d0-1584-48e4-9449-842b0d858f64",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yJX4i0G9kbGDdcJ9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.data.text }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Approved",
+              "description": "The email has been reviewed and a reviewer has explicitly approved sending it. \n\n# Example responses:\n\n\"let's send\"\n\"let's go\"\n\"send it off\""
+            },
+            {
+              "category": "Disapproved",
+              "description": "The email has been reviewed but a reviewer explicitly required modification to the email content, structure, tone of voice, size etc.\n\n# Examples \n\n\"Change the sentence about the product\"\n\"Remove point 4\"\n\"Offer to meet next week\"\n\"Rewrite the paragraph\"\n\"Make it shorter\"\n\"Add bullet points\"\netc "
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1,
+      "position": [
+        1240,
+        0
+      ],
+      "id": "2a9a62d3-59c5-4961-bdab-a4cca727c05f",
+      "name": "Text Classifier"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        300
+      ],
+      "id": "f46edce6-73a0-4b0e-afcc-aeeeca3dfa23",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "KeFMO4sW7o0OKvNk",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Email: {{ $('Edit Fields').item.json.output.email }}\n\nFeedback from Reviewer: {{ $('Gmail').item.json.data.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=# Overview\nYou are a professional sales email writer. Your task is to read the incoming email and rewrite it based on the Reviewer's feedback\n\n# Rules\nSign as Illia, Water Automation\nCurrent date is {{ $now }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        1660,
+        60
+      ],
+      "id": "22167582-726b-4ca0-917e-0288772f925b",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1620,
+        300
+      ],
+      "id": "c1685007-2d09-4852-aae1-5b6d60aa2cd3",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "sarUxNzb6C3utV8Z",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('When Executed by Another Workflow').item.json.Email }}",
+        "subject": "={{ $('AI Agent').item.json.output.subject }}",
+        "emailType": "text",
+        "message": "={{ $('Edit Fields').item.json.output.email }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1720,
+        -140
+      ],
+      "id": "145150d8-9449-4825-b6e7-52afbe089e00",
+      "name": "Gmail1",
+      "webhookId": "d08ff1f3-67f8-4faf-a5c0-5f0a464c8804",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yJX4i0G9kbGDdcJ9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Issues\n** AI agent\n- needs more specific instructions on how to find relevant projects in the database\n\n** Email\n- design more recognizable topic, so lead knows why they receive this email\n\n\n",
+        "height": 220,
+        "width": 440
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        660,
+        -380
+      ],
+      "id": "70bb5a18-ec9a-4fe8-bf7a-5758c6b3b10a",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "Your Name"
+            },
+            {
+              "name": "Email"
+            },
+            {
+              "name": "Company Name"
+            },
+            {
+              "name": "Project Description"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        20
+      ],
+      "id": "9754d607-355c-4156-ba62-e5b950b4ee16",
+      "name": "When Executed by Another Workflow"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          },
+          {
+            "node": "AI Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "main": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "Gmail1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c49b0913-d51b-4e0d-9e73-dc720e93d90a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "77c4e7836a18b1d5afbd616835eb202c32492e1b8289b4775d87520b3ff17b99"
+  },
+  "id": "oElmtqdKfzndGkhq",
+  "tags": []
+}
