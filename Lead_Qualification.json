@@ -1,0 +1,812 @@
+{
+  "name": "Lead Qualification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "3f9dccbd-c028-4747-8b0d-81dfd471a981",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "3019e89f-4d54-4c58-96a5-3e1f8a9e52e5",
+      "name": "Webhook",
+      "webhookId": "3f9dccbd-c028-4747-8b0d-81dfd471a981"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=# Incoming Lead:\n\n## Person:\n1. Full Name: {{ $json.body.LinkedInProfile.FullName }}\n2. Title: {{ $json.body.LinkedInProfile.LastTitle }}\n\n## Company:\n1. Company Name: {{ $json.body.CompanyInformation.CompanyName }}\n2. Industry: {{ $json.body.CompanyInformation.Industry }}\n3. Number of Employees: {{ $json.body.CompanyInformation.CompanyHeadcount }}\n\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "# Overview\nYou are a professional ICP analyst. Your task is to analyze the incoming lead information and compare it with our Ideal Customer Profile (ICP). Your output must follow the rules strictly without exceptions or assumptions.\n\n# Our ICP\n\n1. Industry Fit:\n- High: E-commerce, Supply Chain, Logistics, Real Estate\n- Medium: Education, Recruitment, HR\n- Low: Any other industry not listed above\n\n2. Company Size:\n- High: 50-200 employees or more than 200 employees\n- Medium: 10-49 employees \n- Low: 2-10 employees \n\n3. Person's Title:\n- High: C-level (e.g., CEO, CFO, COO), Founder, Co-Founder, Business Owner, President\n- Medium: VP, Director, or other senior leadership roles\n- Low: Managerial or junior roles\n\n# Lead Ranking Logic\n\nAssign a score (High / Medium / Low) for each of the three ICP criteria.\n\nThen assign the **Final Lead Rank** as follows:\n\n- **High-Quality Lead**: \n  - Scores \"High\" in at least 2 of 3 categories **AND**\n  - **Does NOT score \"Low\" in Industry Fit**\n\n- **Medium-Quality Lead**: \n  - Any of the following:\n    - Scores \"Medium\" in at least 2 of 3 categories\n    - OR scores \"High\" in 2 or more categories **but has \"Low\" in Industry Fit**\n\n- **Low-Quality Lead**:\n  - Scores \"Low\" in 2 or more categories\n\nWhen returning Final Rank Score, output just one word: High, Medium or Low\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        880,
+        0
+      ],
+      "id": "3494a8b1-552a-4364-8659-85738e061fa8",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        860,
+        220
+      ],
+      "id": "5c339da0-5f2c-4cd2-92a0-d8af899c3cba",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "sarUxNzb6C3utV8Z",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4eef097a-81bd-4b94-b0c1-f7bf2f137afc",
+              "leftValue": "={{ $json.output.LeadQualification.FinalRank.Score }}",
+              "rightValue": "High",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "a03b6379-26ce-4792-8cce-00ee86f4755d",
+              "leftValue": "={{ $json.output.LeadQualification.FinalRank.Score }}",
+              "rightValue": "Medium",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1280,
+        0
+      ],
+      "id": "f840e953-9dc2-4fa5-af18-193899bc5ff7",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "deal",
+        "stage": "appointmentscheduled",
+        "additionalFields": {
+          "amount": "={{ $('Airtable').item.json.Budget }}",
+          "dealName": "={{ $('Webhook').item.json.body.CompanyInformation.CompanyName }} - {{ $('Webhook').item.json.body.LinkedInProfile.FullName }}"
+        }
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.1,
+      "position": [
+        1900,
+        -200
+      ],
+      "id": "848e836c-5bad-483e-9b9d-d07185ce172d",
+      "name": "HubSpot",
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "1ARrbJZhtnsC6UX5",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "oElmtqdKfzndGkhq",
+          "mode": "list",
+          "cachedResultName": "My workflow"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Your Name": "={{ $('Code').item.json.body.LinkedInProfile.FullName }}",
+            "Email": "={{ $('Airtable').item.json.Email }}",
+            "Company Name": "={{ $('Code').item.json.body.CompanyInformation.CompanyName }}",
+            "Project Description": "={{ $('Airtable').item.json['Project Description'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Your Name",
+              "displayName": "Your Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Project Description",
+              "displayName": "Project Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2100,
+        -200
+      ],
+      "id": "1ca90fc2-1ac4-4c32-afc1-c274672d1cd2",
+      "name": "Execute Workflow"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Airtable3').item.json.fields.Email }}",
+        "subject": "={{ $('Airtable3').item.json.fields['Company Name'] }} - Response to your request ",
+        "emailType": "text",
+        "message": "=Dear {{ $('Airtable3').item.json.fields['Your Name'] }},\n\nThank you for your interest in our services!\n\nWe reviewed your problem and unfortunately, we are not ready to assist you at this moment due to lack of capacity at the moment.\n\nHope we can collaborate in the future!\n\nBest Regards,\nIllia, Water Automation",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2080,
+        140
+      ],
+      "id": "c913e9eb-7bc6-41c1-8eea-217e12b727b3",
+      "name": "Gmail",
+      "webhookId": "b04431f3-7157-43f9-8294-28cbf8f47f00",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "yJX4i0G9kbGDdcJ9",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appAqYNRYLqgU8w8e",
+          "mode": "list",
+          "cachedResultName": "ABB",
+          "cachedResultUrl": "https://airtable.com/appAqYNRYLqgU8w8e"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblBDGjg3LWbcQUBR",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://airtable.com/appAqYNRYLqgU8w8e/tblBDGjg3LWbcQUBR"
+        },
+        "filterByFormula": "={Normalized LI URL} = '{{ $('Code').item.json.body.LinkedInProfile.LinkedInURL }}'",
+        "options": {
+          "fields": [
+            "Your Name",
+            "Company Name",
+            "Email"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1560,
+        140
+      ],
+      "id": "fe8e12c8-056a-4c22-9237-945ef9c7531b",
+      "name": "Airtable1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "c4paONOOzerBD9tC",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"LeadQualification\": {\n    \"IndustryFit\": {\n      \"Rank\": \"string\",\n      \"Reasoning\": \"string\"\n    },\n    \"CompanySize\": {\n      \"Rank\": \"string\",\n      \"Reasoning\": \"string\"\n    },\n    \"PersonTitle\": {\n      \"Rank\": \"string\",\n      \"Reasoning\": \"string\"\n    },\n    \"FinalRank\": {\n      \"Score\": \"string\",\n      \"Decision\": \"string\"\n    }\n  }\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        1080,
+        220
+      ],
+      "id": "7312e658-4ab5-4c76-908a-5efb81cd4f87",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "content": "- Better search by lead's email in Airtable\n- Or we can also search by Linkedin URL but make sure no unnecessary symbols exist\n- Or set up filtering",
+        "height": 120,
+        "width": 320
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2960,
+        -380
+      ],
+      "id": "7fc2074b-e38e-4b10-88ed-2d8551a1d520",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const url = item.json.body?.LinkedInProfile?.LinkedInURL || '';\n  const normalizedUrl = url.endsWith('/') ? url : url + '/';\n\n  // Update the original object\n  return {\n    json: {\n      ...item.json,\n      body: {\n        ...item.json.body,\n        LinkedInProfile: {\n          ...item.json.body.LinkedInProfile,\n          LinkedInURL: normalizedUrl\n        }\n      }\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "0994bdbb-8946-49e6-84e0-30ee21cbc934",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appAqYNRYLqgU8w8e",
+          "mode": "list",
+          "cachedResultName": "ABB",
+          "cachedResultUrl": "https://airtable.com/appAqYNRYLqgU8w8e"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblBDGjg3LWbcQUBR",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://airtable.com/appAqYNRYLqgU8w8e/tblBDGjg3LWbcQUBR"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "Score": "={{ $('AI Agent').item.json.output.LeadQualification.FinalRank.Score }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Your Name",
+              "displayName": "Your Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "LinkedIn",
+              "displayName": "LinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Normalized LI URL",
+              "displayName": "Normalized LI URL",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Project Description",
+              "displayName": "Project Description",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1680,
+        -200
+      ],
+      "id": "d258ff91-9266-49ec-8dd1-854bee0ac4d1",
+      "name": "Airtable2",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "c4paONOOzerBD9tC",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appAqYNRYLqgU8w8e",
+          "mode": "list",
+          "cachedResultName": "ABB",
+          "cachedResultUrl": "https://airtable.com/appAqYNRYLqgU8w8e"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblBDGjg3LWbcQUBR",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://airtable.com/appAqYNRYLqgU8w8e/tblBDGjg3LWbcQUBR"
+        },
+        "filterByFormula": "={Normalized LI URL} = '{{ $('Code').item.json.body.LinkedInProfile.LinkedInURL }}'",
+        "options": {
+          "fields": [
+            "Your Name",
+            "Company Name",
+            "Email",
+            "Project Description",
+            "Budget"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1480,
+        -200
+      ],
+      "id": "5582446a-a765-4806-b60a-09676e177fe0",
+      "name": "Airtable",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "c4paONOOzerBD9tC",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appAqYNRYLqgU8w8e",
+          "mode": "list",
+          "cachedResultName": "ABB",
+          "cachedResultUrl": "https://airtable.com/appAqYNRYLqgU8w8e"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblBDGjg3LWbcQUBR",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://airtable.com/appAqYNRYLqgU8w8e/tblBDGjg3LWbcQUBR"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "Score": "={{ $('AI Agent').item.json.output.LeadQualification.FinalRank.Score }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Your Name",
+              "displayName": "Your Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "LinkedIn",
+              "displayName": "LinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Normalized LI URL",
+              "displayName": "Normalized LI URL",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Project Description",
+              "displayName": "Project Description",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1820,
+        140
+      ],
+      "id": "8a80cb6e-272a-49b7-b560-449f1916a83d",
+      "name": "Airtable3",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "c4paONOOzerBD9tC",
+          "name": "Airtable account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Airtable1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable1": {
+      "main": [
+        [
+          {
+            "node": "Airtable3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable2": {
+      "main": [
+        [
+          {
+            "node": "HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable": {
+      "main": [
+        [
+          {
+            "node": "Airtable2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable3": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8e4eeb66-f71d-4475-bd9f-cdb182784ff5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "77c4e7836a18b1d5afbd616835eb202c32492e1b8289b4775d87520b3ff17b99"
+  },
+  "id": "tUOb3RsOTvV0eITw",
+  "tags": []
+}
